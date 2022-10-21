@@ -32,22 +32,24 @@ class KernelGP(GaussianProcess):
         # c = (K+sigma^2I)^{-1}K(x)
         self.n_t = len(x_test)
         tic = timeit.default_timer()
-        self.k_vec = self._compute_kernel(x_test)
+        self.k_vec = self._compute_kernel(x_test) #(n,n_t)
         pred = self.z_train @ self.inv_kernel @ self.k_vec #(n,n_t)
         toc = timeit.default_timer()
         self.test_time = toc - tic
         return pred
 
     def c_test(self, y_test):
-        self.c_vec = y_test @ y_test.T * self.k_vec
+        self.c_vec = self.y_train @ y_test.T * self.k_vec #(n,n_t)
         return  self.z_train @ self.inv_ckernel @ self.c_vec #(n,n_t)
 
-    def sigma(self):
+    def sigma(self): #n_t
         #c_kernel sigma computation
-        return np.id(self.n_t) -np.einsum('ij,jk,ki->i', self.k_vec.T, self.inv_kernel, self.k_vec)
+        return np.ones(self.n_t) - \
+            np.einsum('ij,jk,ki->i', self.k_vec.T, self.inv_kernel, self.k_vec)
     
-    def c_sigma(self, y_test):
-        return y_test@y_test.T - np.einsum('ij,jk,ki->i', self.c_vec.T, self.inv_ckernel, self.c_vec)
+    def c_sigma(self, y_test): #n_t
+        return np.einsum('ij,ji->i',y_test,y_test.T) - \
+            np.einsum('ij,jk,ki->i', self.c_vec.T, self.inv_ckernel, self.c_vec)
 
 
 

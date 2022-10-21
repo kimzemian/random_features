@@ -4,7 +4,7 @@ class RandomFeaturesGP(GaussianProcess):
     #gaussian process using random features 
     def __init__(self, x_train, y_train, z_train):    
         super().__init__(x_train, y_train, z_train)
-        self.rf_d = 800 #rf_d is dim of randomfeatures vector, to choose based on paper     
+        self.rf_d = 700 #rf_d is dim of randomfeatures vector, to choose based on paper     
         self.sigma_n = 1 #regularization parameter
         self.samples = np.random.multivariate_normal\
                        (self.rf_mu,self.rf_cov,size =self.rf_d//2) #(rf_d//2,d)
@@ -16,15 +16,15 @@ class RandomFeaturesGP(GaussianProcess):
         self.inv_cphi = []
 
     def _compute_phi(self, x): #(n,d)  first var: n or n_t
-        phi = np.empty((self.n,self.rf_d))
+        phi = np.empty((len(x),self.rf_d))
         dot_product = x @ self.samples.T #(n,rf_d//2)
         phi[:,0::2]=np.sin(dot_product)
         phi[:,1::2]=np.cos(dot_product)
         phi = math.sqrt(2/self.rf_d) * phi #(n,rf_d)
         return phi
 
-    def _compute_cphi(self, phi, y): #(n,d)(n,m+1) first var: n or n_t
-        return np.matmul(y[:,:,np.newaxis], phi[:,np.newaxis,:]).reshape((self.n,-1)) #(n,s) 
+    def _compute_cphi(self, phi, y): #(n,d)(n,m+1) first,third var: n or n_t
+        return np.matmul(y[:,:,np.newaxis], phi[:,np.newaxis,:]).reshape(len(phi),-1) #(n,s) 
 
     def train(self):
         tic = timeit.default_timer()
@@ -67,3 +67,13 @@ class RandomFeaturesGP(GaussianProcess):
     def estimate_ckernel(self):
         return self.cphi @ self.cphi.T
 
+#     def meanvar(self):
+#         meanvar = self.phi_test @ np.reshape(self.inv_cphi@self.cphi.T@self.z_train, self.d, -1) #(n_t,m+1)
+#         #y[:,:,np.newaxis] @  meanvar[:,np.newaxis,:]
+    
+#     def sigmavar(self):
+#         sigmavar = sigma**2 * np.einsum('ij,jk,ki->i', self.cphi_test, \
+#                                         np.reshape(self.inv_cphi, self.d, self.m + 1, self.m +1, self.d), self.cphi_test.T)
+#         y[:,:,np.newaxis] @ y[:,np.newaxis,:] * sigmavar
+#         #self.sigma**2 * y @ sigmavar @ y
+                  
