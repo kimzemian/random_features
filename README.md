@@ -1,5 +1,4 @@
-# random features method for gaussian processes
+# random fourier features method data driven control
 
-Applied to RBF kernel and the compound kernel
--for compound kernel refer to arXiv:2106.07108
+Applied to two compound RBF kernels incorporating the control input, work in progress. There will be more explanation on this. 
  
