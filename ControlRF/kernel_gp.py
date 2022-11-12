@@ -59,12 +59,12 @@ class KernelGP(GaussianProcess):
     def mean_var(self, x_test): #n_t=1
         self.k_vec = self._compute_kernel(x_test) #(n,n_t)
         self.k_h = self.k_vec * self.y_train  #(n,m+1)
-        b = self.z_train @ self.inv_ckernel @ self.k_h #m+1
-        #y @ b.T
-        return b
+        meanvar = self.z_train @ self.inv_ckernel @ self.k_h #m+1
+        return meanvar.T #y @ meanvar
+    
     def sigma_var(self): #n_t=1
-        c = sqrtm(np.identity(self.m+1)-self.k_h.T@self.inv_ckernel@self.k_h) #(m+1,m+1)
-        # norm(y @ c) 
-        return c
+        sigmavar = sqrtm(np.identity(self.m+1)-self.k_h.T@self.inv_ckernel@self.k_h) #(m+1,m+1)
+        # norm(y @ sigmavar) 
+        return sigmavar
 
 

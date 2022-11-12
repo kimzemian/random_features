@@ -28,7 +28,7 @@ class RandomFeaturesGP(GaussianProcess):
     def train(self):
         tic = timeit.default_timer()
         prephi = self._prephi(self.x_train) #(n,rf_d,m+1)
-        self.phi = self._comput_cphi(prephi,self.y_train) #(n,rf_d)
+        self.phi = self._compute_cphi(prephi,self.y_train) #(n,rf_d)
         self.inv_phi = la.inv(self.phi.T @ self.phi + self.sigma_n ** 2 * \
                               np.identity(self.rf_d)) #(rf_d,rf_d) 
         toc = timeit.default_timer()
@@ -53,13 +53,12 @@ class RandomFeaturesGP(GaussianProcess):
         return self.phi @ self.phi.T
 
     def mean_var(self,x_test): #n_t=1
-        self.prephi_test = self._prephi(x_test) #(n_t,rf_d,m+1)
-        prephi_test = self.prephi_test.squeeze(axis=0) #(rf_d,m+1)
-        meanvar = prephi_test.T @  self.inv_phi @ self.phi.T @ self.z_train #(n_t,1)
+        self.prephi_test = self._prephi(x_test).squeeze(axis=0) #(rf_d,m+1)
+        meanvar = self.prephi_test.T @  self.inv_phi @ self.phi.T @ self.z_train #(n_t,1)
         #y @ meanvar 
         return meanvar
     
     def sigma_var(self): #n_t=1
         sigmavar = self.sigma * sqrtm(self.inv_phi) @ self.prephi_test #(rf_d,m+1)
         #norm(y @ sigmavar.T)
-        return sigmavar         
+        return sigmavar.T         

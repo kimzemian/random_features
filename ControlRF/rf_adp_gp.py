@@ -76,18 +76,17 @@ class RandomFeaturesADPGP(GaussianProcess):
         return self.cphi @ self.cphi.T
 
     def mean_var(self,x_test): #n_t=1
-        self.phi_test = self._compute_phi(x_test) #(n_t,rf_d)
-        rest = np.reshape(self.inv_cphi @ self.cphi.T @ self.z_train, (self.rf_d,-1))
-        b = np.einsum('ij,ji->i', self.phi_test.reshape((self.m+1,-1)), rest) #(rf_d,m+1)->(m+1)
-        #y @  b
-        return b
-        
+        self.phi_test = self._compute_phi(x_test) #(n_t,s)
+        rest = np.reshape(self.inv_cphi @ self.cphi.T @ self.z_train, (self.rf_d,-1)) #(rf_d,m+1)
+        meanvar = np.einsum('ij,ji->i', self.phi_test.reshape((self.m+1,-1)), rest) #(m+1)
+        #y @  meanvar
+        return meanvar    
     
     def sigma_var(self): #n_t=1  
-        first = sqrtm(self.inv_cphi).reshape((self.s,self.m+1,-1))
+        first = sqrtm(self.inv_cphi).reshape((self.s,self.m+1,-1)) #(s,m+1,rf_d)
         sigmavar = np.einsum('...hij,ji->hi', first, \
-            self.phi_test.reshape((self.d,-1))) #(s,m+1)
+            self.phi_test.reshape((self.rf_d,-1))) #(s,m+1)
         #norm(y @ sigmavar.T)
-        return sigmavar
+        return sigmavar.T
         
                   
