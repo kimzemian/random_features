@@ -7,9 +7,9 @@ from .gp import GaussianProcess
 
 class RandomFeaturesGP(GaussianProcess):
     #gaussian process using random features 
-    def __init__(self, x_train, y_train, z_train):    
+    def __init__(self, x_train, y_train, z_train,rf_d=50):    
         super().__init__(x_train, y_train, z_train)
-        self.rf_d = 700 #rf_d is dim of randomfeatures vector, to choose based on paper     
+        self.rf_d = rf_d #rf_d is dim of randomfeatures vector, to choose based on paper     
         self.sigma_n = 1 #regularization parameter
         self.samples = np.random.multivariate_normal(self.rf_mu,self.rf_cov, \
                         size =((self.m+1)*self.rf_d//2)) #(s/2,d)
@@ -59,6 +59,6 @@ class RandomFeaturesGP(GaussianProcess):
         return meanvar
     
     def sigma_var(self): #n_t=1
-        sigmavar = self.sigma * sqrtm(self.inv_phi) @ self.prephi_test #(rf_d,m+1)
+        sigmavar = self.sigma * sqrtm(self.prephi_test.T @ self.inv_phi @ self.prephi_test) #(m+1,m+1)
         #norm(y @ sigmavar.T)
         return sigmavar.T         

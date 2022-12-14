@@ -8,9 +8,9 @@ from .gp import GaussianProcess
 
 class RandomFeaturesADPGP(GaussianProcess):
     #gaussian process using random features 
-    def __init__(self, x_train, y_train, z_train):    
+    def __init__(self, x_train, y_train, z_train, rf_d=50):    
         super().__init__(x_train, y_train, z_train)
-        self.rf_d = 700 #rf_d is dim of randomfeatures vector, to choose based on paper     
+        self.rf_d = rf_d #rf_d is dim of randomfeatures vector, to choose based on paper     
         self.sigma_n = 1 #regularization parameter
         self.s = (self.m+1) * self.rf_d
         self.samples = np.random.multivariate_normal(self.rf_mu,self.rf_cov, \
@@ -81,12 +81,11 @@ class RandomFeaturesADPGP(GaussianProcess):
         meanvar = np.einsum('ij,ji->i', self.phi_test.reshape((self.m+1,-1)), rest) #(m+1)
         #y @  meanvar
         return meanvar    
-    
-    def sigma_var(self): #n_t=1  
-        first = sqrtm(self.inv_cphi).reshape((self.s,self.m+1,-1)) #(s,m+1,rf_d)
-        sigmavar = np.einsum('...hij,ji->hi', first, \
-            self.phi_test.reshape((self.rf_d,-1))) #(s,m+1)
+            
+    def sigma_var(self): #n_t=1
+        test = self.phi_test.reshape((self.m+1,-1)) #(m+1,rf_d)
+        inv = self.inv_cphi.reshape((-1,self.rf_d,self.m+1,self.rf_d)) #(m+1,rf_d,m+1,rf_d) 
+        sigmavar = sqrtm(np.einsum('ij,ijkl,kl->ik',test,inv,test)) #(m+1,m+1)
         #norm(y @ sigmavar.T)
         return sigmavar.T
-        
                   
