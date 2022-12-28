@@ -5,16 +5,19 @@ from numpy import linalg as la
 from scipy.linalg import sqrtm
 from .gp import GaussianProcess
 
-class KernelGP(GaussianProcess):
+class ADKernel(GaussianProcess):
+    '''affine dense kernel gp'''
+
+    __name__ = 'ad_kernel'
+
     def __init__(self, x_train, y_train, z_train):
         GaussianProcess.__init__(self, x_train, y_train, z_train)
-        self.sigma_n = 1
         self.kernel = []
         self.inv_kernel = []
         self.k_vec = []
 
     def rbf(self, x, axis=1, keepdims=False):
-        return np.exp(-np.sum(np.square(x), axis=axis, keepdims=keepdims)/(2 * self.sigma ** 2))
+        return np.exp(-np.sum(np.square(x), axis=axis, keepdims=keepdims)/(2 * self.sgm ** 2))
 
     def _compute_kernel_helper(self, x_test=None):
         train_k = self.rbf(self.x_train, keepdims=True) #(n,1)
@@ -32,7 +35,7 @@ class KernelGP(GaussianProcess):
         k_mat, diag_k = self._compute_kernel_helper(x_test)
         ytr_sum = np.sum(self.y_train, axis=1, keepdims=True)
         if y_test is not None:
-            ys =  ytr_sum @ np.sum(y_test, axis=1, keepdim=True).T #(n,n_t)
+            ys =  ytr_sum @ np.sum(y_test, axis=1, keepdims=True).T #(n,n_t)
         else:
             ys = ytr_sum @ ytr_sum.T
             y_test = self.y_train
@@ -54,14 +57,21 @@ class KernelGP(GaussianProcess):
 
     def train(self): 
         # kernel training
+        tic = timeit.default_timer()
         self.kernel = self._compute_kernel()
-        self.inv_kernel = la.inv(self.kernel + self.sigma_n**2 * np.identity(self.n)) #(n,n)          
+        self.inv_kernel = la.inv(self.kernel + self.sgm**2 * np.identity(self.n)) #(n,n) 
+        toc = timeit.default_timer()
+        self.training_time = toc-tic         
 
     def test(self, x_test, y_test):
-        # c = (K+sigma^2I)^{-1}K(x)
+        # c = (K+sgm^2I)^{-1}K(x)
+        tic = timeit.default_timer()
         self.n_t = len(x_test)
         self.k_vec = self._compute_kernel(x_test, y_test) #(n,n_t)
-        return  self.z_train @ self.inv_kernel @ self.k_vec #n_t
+        pred = self.z_train @ self.inv_kernel @ self.k_vec #n_t
+        toc = timeit.default_timer()
+        self.test_time = toc - tic
+        return pred
     
     def sigma(self, x_test, y_test): #n_t=1
         return self._compute_entries(x_test, y_test) - \
