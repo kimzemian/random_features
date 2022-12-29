@@ -9,8 +9,13 @@ designed data driven gaussian process controllers for 6 different gaussian proce
 plots and experiments implemented for all controllers on inverted pendulum.
 
 work in progress, more to come!
- 
-To initialize:
+
+## Setup
+To initialize the submodule dynamics library:
 ```
 git submodule update --init --recursive
+```
+Then to setup
+```
+cd core; python setup.py develop
 ```
