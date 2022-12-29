@@ -1,6 +1,10 @@
 import numpy as np
 
 class GaussianProcess():
+    '''
+    methods to overwrite:
+    train, test, sigma, mean_var, sigma_var
+    '''
     def __init__(self, x_train, y_train, z_train):
         self.x_train = x_train
         self.y_train = y_train
@@ -10,9 +14,9 @@ class GaussianProcess():
         self.m = len(y_train[0]) - 1 #number of controls
         
         self.mu = 0
-        self.sigma = 1
+        self.sgm = 1 #regularization parameter
         self.rf_mu = np.zeros(self.d)
-        self.rf_cov = 1/self.sigma * np.identity(self.d)
+        self.rf_cov = 1/self.sgm * np.identity(self.d)
 
 
 

@@ -2,7 +2,6 @@ import sys
 import os
 import cvxpy as cp
 import numpy as np
-from ControlRF import KernelADPGP, RandomFeaturesADPGP
 
 module_path = os.path.abspath(os.path.join('.'))
 os.environ['MOSEKLM_LICENSE_FILE'] = module_path
@@ -14,28 +13,12 @@ if module_path not in sys.path:
 from core.controllers import QPController
 
 class GPController(QPController):
-    def __init__(self, system_est, system, controller, aff_lyap, x_0, T, num_steps):
-        QPController.__init__(self, system_est, system_est.m)
-        xs, us, ts = GPController._simulate(system, controller, x_0, T, num_steps)
-        xs, ys, zs = GPController._build_ccf_data(aff_lyap,xs,us,ts) #ts=ts[1:-1]
-        return xs, ys, zs
-    
-    @staticmethod
-    def _simulate(system, controller, x_0, T, num_steps):
-        '''simulate system with specified controller'''
-        ts = np.linspace(0, T, num_steps)
-        xs, us = system.simulate(x_0, controller, ts)
-        return xs, us, ts
+    '''controller to ensure safety and/or stability using gp methods'''
 
-    @staticmethod
-    def _build_ccf_data(aff_lyap, xs, us, ts):
-        ''' estimate error in the derivate of the CCF function
-        using forward differencing '''
-        av_x = (xs[:-1] + xs[1:])/2
-        zs= [(aff_lyap.eval(xs[i+1],ts[i+1])- aff_lyap.eval(xs[i],ts[i]))/(ts[i+1]-ts[i]) - \
-        aff_lyap.eval_dot(av_x[i],us[i],ts[i]) for i in range(len(us))]
-        ys = np.concatenate((np.ones((len(us),1)), us), axis=1)
-        return av_x, ys, zs
+    def __init__(self, system_est, gp):
+        gp.train()
+        self. gp = gp
+        QPController.__init__(self, system_est, system_est.m)  
     
     def add_stability_constraint(self,aff_lyap, comp=0, slacked=False, beta=1, coeff=0):
         if slacked:
