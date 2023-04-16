@@ -38,12 +38,12 @@ def create_data(system, qp_controller, lyap_est, T, num_steps):
 
     initial_x0s = np.mgrid[-.1:.15:.05, -.1:.15:.05, -.1:.15:.05, -.1:.15:.05].reshape(4, -1).T
     for x_0 in initial_x0s:
-        x, y, z = data_gen(system, qp_controller, lyap_est, torch.FloatTensor([0.1,0,0,0]), 10, 100)
+        x, y, z = data_gen(system, qp_controller, lyap_est, torch.FloatTensor([0.1,0,0,0]), T, num_steps)
         xs = np.concatenate((xs,x))
         ys = np.concatenate((ys,y))
         zs = np.concatenate((zs,z))
 
-    np.savez(f'data_{T}_{num_steps}', xs=xs, ys=ys, zs=zs)
+    np.savez(f'data_{T}_{num_steps},{xs.shape}', xs=xs, ys=ys, zs=zs)
 
 
 def c_dot(system, controller, aff_lyap, x_0, T, num_steps):
@@ -52,3 +52,4 @@ def c_dot(system, controller, aff_lyap, x_0, T, num_steps):
     av_x = (xs[:-1] + xs[1:])/2
     zs = [(aff_lyap.eval(xs[i+1],ts[i+1])- aff_lyap.eval(xs[i],ts[i]))/(ts[i+1]-ts[i]) for i in range(len(us))]
     return zs
+
