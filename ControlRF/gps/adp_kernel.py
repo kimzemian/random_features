@@ -45,7 +45,7 @@ class ADPKernel(GaussianProcess):
         return meanvar.T #y @ meanvar
     
     def sigma_var(self): #n_t=1
-        sigmavar = sqrtm(np.identity(self.m+1)-self.k_h.T@self.inv_ckernel@self.k_h) #(m+1,m+1)
+        sigmavar = sqrtm(abs(np.identity(self.m+1)-self.k_h.T@self.inv_ckernel@self.k_h)) #(m+1,m+1)
         # norm(y @ sigmavar) 
         return sigmavar
 

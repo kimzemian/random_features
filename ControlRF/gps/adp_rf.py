@@ -67,7 +67,7 @@ class ADPRandomFeatures(GaussianProcess):
     def sigma_var(self): #n_t=1
         test = self.phi_test.reshape((self.m+1,-1)) #(m+1,rf_d)
         inv = self.inv_cphi.reshape((-1,self.rf_d,self.m+1,self.rf_d)) #(m+1,rf_d,m+1,rf_d) 
-        sigmavar = sqrtm(np.einsum('ij,ijkl,kl->ik',test,inv,test)) #(m+1,m+1)
+        sigmavar = sqrtm(abs(np.einsum('ij,ijkl,kl->ik',test,inv,test))) #(m+1,m+1)
         #norm(y @ sigmavar.T)
         return sigmavar.T
                   

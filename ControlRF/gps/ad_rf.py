@@ -61,6 +61,6 @@ class ADRandomFeatures(GaussianProcess):
         return meanvar
     
     def sigma_var(self): #n_t=1
-        sigmavar = self.sgm * sqrtm(self.prephi_test.T @ self.inv_phi @ self.prephi_test) #(m+1,m+1)
+        sigmavar = self.sgm * sqrtm(abs(self.prephi_test.T @ self.inv_phi @ self.prephi_test)) #(m+1,m+1)
         #norm(y @ sigmavar.T)
         return sigmavar.T         
