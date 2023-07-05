@@ -15,7 +15,7 @@ class ADPKernel(GaussianProcess):
 
     def _compute_kernel(self, x_test): 
         x_dif = self.x_train.reshape((self.n,1,self.d)) - x_test
-        return np.exp(-np.sum(np.square(x_dif), axis=2)/(2 * self.sgm ** 2)) #(n,n) or (n,n_t)
+        return np.exp(-np.sum(np.square(x_dif), axis=2) / (2 * self.sgm ** 2)) #(n,n) or (n,n_t)
 
     def train(self):
         tic = timeit.default_timer()

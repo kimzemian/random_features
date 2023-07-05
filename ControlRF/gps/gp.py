@@ -14,9 +14,9 @@ class GaussianProcess():
         self.m = len(y_train[0]) - 1 #number of controls
         
         self.mu = 0
-        self.sgm = 1 #regularization parameter
+        self.sgm = 20 #regularization parameter
         self.rf_mu = np.zeros(self.d)
-        self.rf_cov = 1/self.sgm * np.identity(self.d)
+        self.rf_cov = (self.sgm ** 2) * np.identity(self.d) #gives fourier transform of the RBF kernel
 
 
 

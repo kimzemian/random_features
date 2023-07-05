@@ -50,6 +50,9 @@ class GPController(QPController):
         input_indep = delta - (
             aff_lyap.drift(x, t) + mv[0] + comp * aff_lyap.eval(x, t)
         )  # ()
+        # print('act and drift respectively at',x,t)
+        # print(aff_lyap.act(x,t))
+        # print(aff_lyap.drift(x,t))
         return cp.SOC(
             input_dep @ self.u.T + input_indep,
             beta * sv[1:].T @ self.u + beta * sv[0].T,

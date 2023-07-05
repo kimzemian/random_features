@@ -1,6 +1,10 @@
+import re
+import pickle
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as lines
+import matplotlib.cm as cm
 import networkx as nx
 from matplotlib import animation
 from matplotlib.patches import Rectangle
@@ -11,9 +15,184 @@ plt.style.use("seaborn-whitegrid")
 from ControlRF.util import *
 
 
+def plot_info(x_0, controllers, path, diff=False):
+    """plotting true C_dot/C using controllers over time or
+    plots sum of difference from the oracle controller for each controller over epochs"""
+
+    c = 1
+    fmts = ["c-", "m-", "y-", "r-"]
+
+    fig, ax = plt.subplots(sharex=True)
+    ax.set_xlabel("$t$", fontsize=8)
+    ax.set_ylabel("$C$", fontsize=8)
+    data = np.load(path)
+
+    if diff:
+        gp_zs = data["gp_zs"]
+        qp_zs = data["qp_zs"]
+        model_zs = data["model_zs"]
+        ts = data["ts"]
+    else:
+        gp_zs = data["gp_zs"][:,:,-1]
+        qp_zs = data["qp_zs"][:,-1]
+        model_zs = data["model_zs"][:,-1]
+        ts = data["ts"]
+
+    for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
+        ax.plot(ts, gp_zs[i], fmt, label=controller.__name__, markersize=c, alpha=0.4)
+
+    ax.plot(ts, qp_zs, "-", label="qp_controller", markersize=c)
+    ax.plot(ts, model_zs, "k-.", label="oracle_controller", markersize=c)
+
+    ax.legend()
+    if diff:
+        ax.set_title(f'True C/C_dot for controllers over time')
+    else: 
+        ax.set_title(f'difference from oracle C/C_dot for controllers over episodes')
+    plt.figtext(0.12, 0.94, f"x_0={x_0}")
+    fig.figsize = (9, 6)
+    fig.tight_layout()
+    fig.savefig(f"dip_plots/{re.sub('.','',str(x_0))}_10_sec.png")
+    plt.show()
+    plt.close()
+    
+    if not diff:
+        
+        fig, ax = plt.subplots(sharex=True)
+        ax.set_xlabel("$t$", fontsize=8)
+        ax.set_ylabel("$C$", fontsize=8)
+
+        t_1 = 80
+        t_2 = 100
+        for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
+            ax.plot(
+                ts[t_1:t_2],
+                gp_zs[i, t_1:t_2],
+                fmt,
+                label=controller.__name__,
+                markersize=c,
+                alpha=0.4,
+            )
+        ax.plot(ts[t_1:t_2], qp_zs[t_1:t_2], "-", label="qp_controller", markersize=c)
+        ax.plot(ts[t_1:t_2], model_zs[t_1:t_2], "k-.", label="oracle_controller", markersize=c)
+
+        ax.legend()
+        ax.set_title(f'True C/C_dot for controllers over time {t1}:{t2}')
+        plt.figtext(0.12, 0.94, f"x_0={x_0}")
+        fig.figsize = (9, 6)
+        fig.tight_layout()
+        fig.savefig(f"dip_plots/sec_{t_1}_{t_2}.png")
+        plt.show()
+
+        plt.close()
+    
+def plot_controller_over_episodes(x_0, epochs, path, gp_names):
+    """plotting true C_dot/true C using specified controller over time """
+    
+    cmap = plt.get_cmap("jet", epochs)
+    norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)   
+    c = 1
+
+    data = np.load(path)
+    gp_zs = data["gp_zs"]
+    # qp_zs = data["qp_zs"]
+    model_zs = data["model_zs"][:,-1]
+    ts = data["ts"]
+    
+    for gp_data,gp_name in zip(gp_zs,gp_names):
+        fig, ax = plt.subplots(sharex=True)
+        ax.set_xlabel("$t$", fontsize=8)
+        ax.set_ylabel("$C$", fontsize=8)
+
+        for epoch in range(epochs):
+            ax.plot(ts, gp_data[:,epoch], markersize=c, alpha=0.4, c=cmap(epoch))
+        ax.plot(ts, model_zs, "k-.", label="oracle_controller", markersize=c)
+
+        fig.colorbar(sm, ticks=np.arange(1., epochs + 1))
+        ax.legend()
+        ax.set_title(f'True C/C_dot for {gp_name} controller over time, x_0={x_0}')
+        # plt.figtext(0.12, 0.94, f"x_0={x_0},{gp_name}")
+        fig.figsize = (9, 6)
+        fig.tight_layout()
+        fig.savefig(f"dip_plots/{gp_name} controller over time.png")
+        plt.show()
+        plt.close()
+    
+def plot_predicted_vs_true_func(x_0, epochs, T):
+    """plotting true C_dot/true C versus the predicted C_dot for each iteration"""
+    
+    with open('data/test_previous_gp.pickle', 'rb') as handle:
+        data = pickle.load(handle)
+    value = next(iter(data.values()))
+    epochs = len(value[0])
+    ts = np.linspace(0, T, num_steps)
+    ts = ts[1:]
+    
+    c = 1
+    fmts = ["c-", "m-", "y-", "r-"]
+
+    
+    for key in data.keys():
+        cmap = plt.get_cmap("jet", epochs)
+        norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+        fig, ax = plt.subplots(sharex=True)
+        ax.set_xlabel("$t$", fontsize=8)
+        ax.set_ylabel("$C$", fontsize=8)
+        for epoch in range(2,epochs):
+            ax.plot(ts, data[key][:,epoch], label=epoch, markersize=c, alpha=0.4, c=cmap(epoch))
+
+        fig.colorbar(sm, ticks=np.arange(1, epochs + 1))
+        ax.legend()
+        ax.set_title(f'abs error in predicted df for {gp_name} controller over episodes, x_0={x_0}')
+        plt.figtext(0.12, 0.94, f"x_0={x_0},{key}")
+        fig.figsize = (9, 6)
+        fig.tight_layout()
+        fig.savefig(f"dip_plots/{key} predicted-true z.png")
+        plt.show()
+        plt.close() 
+        
+
+def plot_cum_predicted_vs_true_func(x_0, epochs, T, num_steps):
+    """plotting true C_dot/true C versus the predicted C_dot for each iteration"""
+    
+    with open('data/test_previous_gp.pickle', 'rb') as handle:
+        data = pickle.load(handle)
+    value = next(iter(data.values()))
+    epochs = len(value[0])
+    ts = np.linspace(0, T, num_steps)
+    ts = ts[1:]
+    
+    c = 1
+    fmts = ["c-", "m-", "y-", "r-"]
+    
+    
+    for key in data.keys():
+        cmap = plt.get_cmap("jet", epochs)
+        norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+        fig, ax = plt.subplots(sharex=True)
+        ax.set_xlabel("$t$", fontsize=8)
+        ax.set_ylabel("$C$", fontsize=8)
+        csum = np.cumsum(data[key], axis=0)
+        for epoch in range(2,epochs):
+            ax.plot(ts, csum[:,epoch], label=epoch, markersize=c, alpha=0.4, c=cmap(epoch))
+
+        fig.colorbar(sm, ticks=np.arange(1, epochs + 1))
+        ax.legend()
+        ax.set_title(f'cumulative abs error in predicted df for {key} controller over episodes, x_0={x_0}')
+        # plt.figtext(0.12, 0.94, f"x_0={x_0},{key}")
+        fig.figsize = (9, 6)
+        fig.tight_layout()
+        fig.savefig(f"dip_plots/{key} cum error in df pred.png")
+        plt.show()
+        plt.close() 
+
 def plot_simulation(system, controller, controller_name, x_0, T=20, num_steps=200):
     xs, us, ts = simulate(system, controller, x_0, T, num_steps)
-    """plotting simulated system trajectories using specified controller """
+    """plotting simulated system trajectories using specified controller
+    one dimensional: such as inverted pendulum"""
 
     ax = plt.figure(figsize=(8, 6), tight_layout=True).add_subplot(1, 1, 1)
     ax.set_xlabel("$t$", fontsize=16)
@@ -36,64 +215,8 @@ def plot_simulation(system, controller, controller_name, x_0, T=20, num_steps=20
     plt.show()
     # ax.savefig('theta plot for'+controller_name)
     plt.close()
-
-
-def plot_info(num, x_0, controllers, path):
-    """plotting true C_dot/C using specified controller over time"""
-
-    c = 1
-    fmts = ["c-", "m-", "y-", "r-"]
-
-    fig, ax = plt.subplots(sharex=True)
-    ax.set_xlabel("$t$", fontsize=8)
-    ax.set_ylabel("$C$", fontsize=8)
-
-    data = np.load(path)
-    # data = np.load(f"data/[0,pi,0,0]/eval_c_{num}.npz")
-    gp_zs = data["gp_zs"]
-    qp_zs = data["qp_zs"]
-    model_zs = data["model_zs"]
-    ts = data["ts"]
-
-    for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
-        ax.plot(ts, gp_zs[i], fmt, label=controller.__name__, markersize=c, alpha=0.4)
-
-    ax.plot(ts, qp_zs, "-", label="qp_controller", markersize=c)
-    ax.plot(ts, model_zs, "k-.", label="oracle_controller", markersize=c)
-
-    ax.legend()
-    plt.figtext(0.12, 0.94, f"x_0={x_0}")
-    fig.figsize = (9, 6)
-    fig.tight_layout()
-    fig.savefig(f"data/[1,0,0,0]/{num}_10.png")
-    plt.show()
-    plt.close()
-
-    fig, ax = plt.subplots(sharex=True)
-    ax.set_xlabel("$t$", fontsize=8)
-    ax.set_ylabel("$C$", fontsize=8)
-
-    for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
-        ax.plot(
-            ts[80:100],
-            gp_zs[i, 80:100],
-            fmt,
-            label=controller.__name__,
-            markersize=c,
-            alpha=0.4,
-        )
-    ax.plot(ts[80:100], qp_zs[80:100], "-", label="qp_controller", markersize=c)
-    ax.plot(ts[80:100], model_zs[80:100], "k-.", label="oracle_controller", markersize=c)
-
-    ax.legend()
-    plt.figtext(0.12, 0.94, f"x_0={x_0}")
-    fig.figsize = (9, 6)
-    fig.tight_layout()
-    fig.savefig(f"data/[1,0,0,0]/{num}_3_5.png")
-    plt.show()
-
-    plt.close()
-
+    
+    
 
 def plot_pred_errorbar(xs, ys, zs, gps):
     """plotting gp prediction on training data"""
@@ -229,28 +352,7 @@ def plot_simulation_dip(system, controller, controller_name, x_0, T=20, num_step
     plt.show()
     plt.close()
 
-
-def plot_c_dot_over_time(system, aff_lyap, controllers, gps, x_0, T=10, num_steps=200):
-    """plotting true C_dot using specified controller over time"""
-    c = 1
-    ts = np.linspace(0, T, num_steps)[1:]
-    fmts = ["c-", "m-", "y-", "r-"]
-    zs_fmts = ["b.", "g.", "r.", "k."]
-
-    ax = plt.figure(figsize=(8, 6), tight_layout=True).add_subplot(1, 1, 1)
-    ax.set_xlabel("$t$", fontsize=16)
-
-    for controller, gp, fmt in zip(controllers, gps, fmts):
-        _, _, zs = data_gen(system, controller, aff_lyap, x_0, T, num_steps)
-        ax.plot(ts, zs, fmt, label=gp.__name__ + " controller", markersize=c)
-
-    ax.ylabel("true $\hat{\dot{C}}$")
-    ax.legend()
-    plt.show()
-    # plt.savefig('all_closed_loop_errorbars')
-    plt.close()
-
-
+    
 def render(system, controller, controller_name, x_0, T=20, num_steps=200):
     xs, us, ts = simulate(system, controller, x_0, T, num_steps)
     dt = T / num_steps
@@ -323,3 +425,6 @@ def animate():
             system, controller, f"{gp.__name__}_controller", x_0, T=100, num_steps=1000
         )
         # %time ani.save(f'dip_{gp.__name__}_2.gif', writer=animation.PillowWriter(fps=24))
+
+        
+        
