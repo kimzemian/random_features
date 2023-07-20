@@ -10,8 +10,8 @@ class ADKernel(GaussianProcess):
 
     __name__ = 'ad_kernel'
 
-    def __init__(self, x_train, y_train, z_train):
-        GaussianProcess.__init__(self, x_train, y_train, z_train)
+    def __init__(self, x_train, y_train, z_train, sgm=10):
+        GaussianProcess.__init__(self, x_train, y_train, z_train, sgm)
         self.kernel = []
         self.inv_kernel = []
         self.k_vec = []

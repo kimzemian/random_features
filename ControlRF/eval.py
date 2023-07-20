@@ -1,15 +1,4 @@
-import re
-import pickle
 import numpy as np
-import numpy.linalg as la
-import torch
-from ControlRF import (
-    GPController,
-    ADPKernel,
-    ADPRandomFeatures,
-    ADKernel,
-    ADRandomFeatures,
-)
 
 def simulate(system, controller, x_0, T, num_steps):
     """simulate system with specified controller"""

@@ -1,16 +1,7 @@
-import re
-import pickle
-import numpy as np
+from ControlRF.eval import *
 import numpy.linalg as la
 import torch
-from ControlRF import (
-    GPController,
-    ADPKernel,
-    ADPRandomFeatures,
-    ADKernel,
-    ADRandomFeatures,
-)
-from ControlRF.eval import *
+
 
 def build_ccf_data(lyap, lyap_est, xs, us, ts):
     """estimate error in the derivate of the CCF function
@@ -29,7 +20,6 @@ def build_ccf_data(lyap, lyap_est, xs, us, ts):
 
 def training_data_gen(system, system_est, controller, x_0, T, num_steps):
     """generates training data given a controller"""
-
     xs, us, ts = simulate(system, controller, x_0, T, num_steps)
     xs, ys, zs = build_ccf_data(system.lyap, system_est.lyap, xs, us, ts)  # ts=ts[1:-1]
     return xs, ys, zs
@@ -42,11 +32,11 @@ def create_grid_data(system, system_est, T, num_steps):
         .T
     )
     xs, ys, zs = training_data_gen(
-        system, system_est, torch.from_numpy(initial_x0s[0]), T, num_steps
+        system, system_est, system.qp_controller, torch.from_numpy(initial_x0s[0]), T, num_steps
     )
     for x_0 in initial_x0s[1:]:
         x, y, z = training_data_gen(
-            system, system_est, torch.from_numpy(x_0), T, num_steps
+            system, system_est, system.qp_controller, torch.from_numpy(x_0), T, num_steps
         )
         xs = np.concatenate((xs, x))
         ys = np.concatenate((ys, y))

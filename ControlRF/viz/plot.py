@@ -3,12 +3,7 @@ import pickle
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.lines as lines
-import matplotlib.cm as cm
-import networkx as nx
-from matplotlib import animation
-from matplotlib.patches import Rectangle
-from matplotlib.animation import FuncAnimation, PillowWriter
+
 
 plt.style.use("seaborn-whitegrid")
 
@@ -39,20 +34,20 @@ def plot_info(x_0, controllers, path, diff=False):
         ts = data["ts"]
 
     for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
-        ax.plot(ts, gp_zs[i], fmt, label=controller.__name__, markersize=c, alpha=0.4)
+        ax.plot(ts, gp_zs[i], fmt, label=controller.__name__, markersize=c)
 
     ax.plot(ts, qp_zs, "-", label="qp_controller", markersize=c)
     ax.plot(ts, model_zs, "k-.", label="oracle_controller", markersize=c)
 
     ax.legend()
     if diff:
-        ax.set_title(f'True C/C_dot for controllers over time')
-    else: 
         ax.set_title(f'difference from oracle C/C_dot for controllers over episodes')
+    else: 
+        ax.set_title(f'True C/C_dot for controllers over time')
     plt.figtext(0.12, 0.94, f"x_0={x_0}")
     fig.figsize = (9, 6)
     fig.tight_layout()
-    fig.savefig(f"dip_plots/{re.sub('.','',str(x_0))}_10_sec.png")
+    fig.savefig(f"dip_plots/{re.sub('.',',',str(x_0))}_10_sec.png")
     plt.show()
     plt.close()
     
@@ -77,7 +72,7 @@ def plot_info(x_0, controllers, path, diff=False):
         ax.plot(ts[t_1:t_2], model_zs[t_1:t_2], "k-.", label="oracle_controller", markersize=c)
 
         ax.legend()
-        ax.set_title(f'True C/C_dot for controllers over time {t1}:{t2}')
+        ax.set_title(f'True C/C_dot for controllers over time {t_1}:{t_2}')
         plt.figtext(0.12, 0.94, f"x_0={x_0}")
         fig.figsize = (9, 6)
         fig.tight_layout()
@@ -86,108 +81,9 @@ def plot_info(x_0, controllers, path, diff=False):
 
         plt.close()
     
-def plot_controller_over_episodes(x_0, epochs, path, gp_names):
-    """plotting true C_dot/true C using specified controller over time """
-    
-    cmap = plt.get_cmap("jet", epochs)
-    norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)   
-    c = 1
-
-    data = np.load(path)
-    gp_zs = data["gp_zs"]
-    # qp_zs = data["qp_zs"]
-    model_zs = data["model_zs"][:,-1]
-    ts = data["ts"]
-    
-    for gp_data,gp_name in zip(gp_zs,gp_names):
-        fig, ax = plt.subplots(sharex=True)
-        ax.set_xlabel("$t$", fontsize=8)
-        ax.set_ylabel("$C$", fontsize=8)
-
-        for epoch in range(epochs):
-            ax.plot(ts, gp_data[:,epoch], markersize=c, alpha=0.4, c=cmap(epoch))
-        ax.plot(ts, model_zs, "k-.", label="oracle_controller", markersize=c)
-
-        fig.colorbar(sm, ticks=np.arange(1., epochs + 1))
-        ax.legend()
-        ax.set_title(f'True C/C_dot for {gp_name} controller over time, x_0={x_0}')
-        # plt.figtext(0.12, 0.94, f"x_0={x_0},{gp_name}")
-        fig.figsize = (9, 6)
-        fig.tight_layout()
-        fig.savefig(f"dip_plots/{gp_name} controller over time.png")
-        plt.show()
-        plt.close()
-    
-def plot_predicted_vs_true_func(x_0, epochs, T):
-    """plotting true C_dot/true C versus the predicted C_dot for each iteration"""
-    
-    with open('data/test_previous_gp.pickle', 'rb') as handle:
-        data = pickle.load(handle)
-    value = next(iter(data.values()))
-    epochs = len(value[0])
-    ts = np.linspace(0, T, num_steps)
-    ts = ts[1:]
-    
-    c = 1
-    fmts = ["c-", "m-", "y-", "r-"]
 
     
-    for key in data.keys():
-        cmap = plt.get_cmap("jet", epochs)
-        norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
-        sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-        fig, ax = plt.subplots(sharex=True)
-        ax.set_xlabel("$t$", fontsize=8)
-        ax.set_ylabel("$C$", fontsize=8)
-        for epoch in range(2,epochs):
-            ax.plot(ts, data[key][:,epoch], label=epoch, markersize=c, alpha=0.4, c=cmap(epoch))
 
-        fig.colorbar(sm, ticks=np.arange(1, epochs + 1))
-        ax.legend()
-        ax.set_title(f'abs error in predicted df for {gp_name} controller over episodes, x_0={x_0}')
-        plt.figtext(0.12, 0.94, f"x_0={x_0},{key}")
-        fig.figsize = (9, 6)
-        fig.tight_layout()
-        fig.savefig(f"dip_plots/{key} predicted-true z.png")
-        plt.show()
-        plt.close() 
-        
-
-def plot_cum_predicted_vs_true_func(x_0, epochs, T, num_steps):
-    """plotting true C_dot/true C versus the predicted C_dot for each iteration"""
-    
-    with open('data/test_previous_gp.pickle', 'rb') as handle:
-        data = pickle.load(handle)
-    value = next(iter(data.values()))
-    epochs = len(value[0])
-    ts = np.linspace(0, T, num_steps)
-    ts = ts[1:]
-    
-    c = 1
-    fmts = ["c-", "m-", "y-", "r-"]
-    
-    
-    for key in data.keys():
-        cmap = plt.get_cmap("jet", epochs)
-        norm = matplotlib.colors.BoundaryNorm(np.arange(epochs+1)+0.5,epochs)
-        sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-        fig, ax = plt.subplots(sharex=True)
-        ax.set_xlabel("$t$", fontsize=8)
-        ax.set_ylabel("$C$", fontsize=8)
-        csum = np.cumsum(data[key], axis=0)
-        for epoch in range(2,epochs):
-            ax.plot(ts, csum[:,epoch], label=epoch, markersize=c, alpha=0.4, c=cmap(epoch))
-
-        fig.colorbar(sm, ticks=np.arange(1, epochs + 1))
-        ax.legend()
-        ax.set_title(f'cumulative abs error in predicted df for {key} controller over episodes, x_0={x_0}')
-        # plt.figtext(0.12, 0.94, f"x_0={x_0},{key}")
-        fig.figsize = (9, 6)
-        fig.tight_layout()
-        fig.savefig(f"dip_plots/{key} cum error in df pred.png")
-        plt.show()
-        plt.close() 
 
 def plot_simulation(system, controller, controller_name, x_0, T=20, num_steps=200):
     xs, us, ts = simulate(system, controller, x_0, T, num_steps)
@@ -217,7 +113,6 @@ def plot_simulation(system, controller, controller_name, x_0, T=20, num_steps=20
     plt.close()
     
     
-
 def plot_pred_errorbar(xs, ys, zs, gps):
     """plotting gp prediction on training data"""
 
@@ -351,80 +246,6 @@ def plot_simulation_dip(system, controller, controller_name, x_0, T=20, num_step
     # ax.savefig(controller_name+'theta 2')
     plt.show()
     plt.close()
-
-    
-def render(system, controller, controller_name, x_0, T=20, num_steps=200):
-    xs, us, ts = simulate(system, controller, x_0, T, num_steps)
-    dt = T / num_steps
-
-    x_solution = np.zeros(len(xs))
-    a_solution = xs[:, 0]
-    b_solution = xs[:, 2]
-
-    skip_frames = 5
-
-    x_solution = x_solution[::skip_frames]
-    a_solution = a_solution[::skip_frames]
-    b_solution = b_solution[::skip_frames]
-
-    frames = len(x_solution)
-
-    j1_x = l_1 * np.sin(a_solution) + x_solution
-    j1_y = l_1 * np.cos(a_solution)
-
-    j2_x = l_2 * np.sin(b_solution) + j1_x
-    j2_y = l_2 * np.cos(b_solution) + j1_y
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, autoscale_on=False, xlim=(-1, 1), ylim=(-1, 1))
-    ax.set_aspect("equal")
-    ax.grid()
-
-    patch = ax.add_patch(
-        Rectangle((0, 0), 0, 0, linewidth=1, edgecolor="k", facecolor="r")
-    )
-
-    (line,) = ax.plot([], [], "o-", lw=2)
-    time_template = "time: %.1f s"
-    time_text = ax.text(0.05, 0.9, "", transform=ax.transAxes)
-
-    cart_width = 0.15
-    cart_height = 0.1
-
-    def init():
-        line.set_data([], [])
-        time_text.set_text("")
-        patch.set_xy((-cart_width / 2, -cart_height / 2))
-        patch.set_width(cart_width)
-        patch.set_height(cart_height)
-        return line, time_text
-
-        def animate(i):
-            thisx = [x_solution[i], j1_x[i], j2_x[i]]
-            thisy = [0, j1_y[i], j2_y[i]]
-
-            line.set_data(thisx, thisy)
-            now = i * skip_frames * dt
-            time_text.set_text(time_template % now)
-
-            patch.set_x(x_solution[i] - cart_width / 2)
-            return line, time_text, patch
-
-    ani = animation.FuncAnimation(
-        fig, animate, frames=frames, interval=1, blit=True, init_func=init, repeat=False
-    )
-    plt.close(fig)
-    return ani
-
-
-def animate():
-    ani = render(system, qp_controller, "qp_controller", x_0, T=100, num_steps=1000)
-    # %time ani.save('dip_qp_2.gif', writer=animation.PillowWriter(fps=24))
-    for gp, controller in tqdm(zip(gps, controllers)):
-        ani = render(
-            system, controller, f"{gp.__name__}_controller", x_0, T=100, num_steps=1000
-        )
-        # %time ani.save(f'dip_{gp.__name__}_2.gif', writer=animation.PillowWriter(fps=24))
 
         
         

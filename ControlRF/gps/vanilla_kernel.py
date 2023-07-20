@@ -5,8 +5,8 @@ from scipy.linalg import sqrtm
 from .gp import GaussianProcess
 
 class VanillaKernel(GaussianProcess):
-    def __init__(self, x_train, y_train, z_train):
-        GaussianProcess.__init__(self, x_train, y_train, z_train)
+    def __init__(self, x_train, y_train, z_train, sgm=10):
+        GaussianProcess.__init__(self, x_train, y_train, z_train, sgm)
 
     def _compute_kernel(self, x_test): 
         x_dif = self.x_train.reshape((self.n,1,self.d)) - x_test

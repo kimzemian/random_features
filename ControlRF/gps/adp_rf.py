@@ -11,8 +11,8 @@ class ADPRandomFeatures(GaussianProcess):
 
     __name__ = 'adp_rf'
 
-    def __init__(self, x_train, y_train, z_train, rf_d=50):    
-        super().__init__(x_train, y_train, z_train)
+    def __init__(self, x_train, y_train, z_train, sgm=10, rf_d=50):    
+        super().__init__(x_train, y_train, z_train, sgm)
         self.rf_d = rf_d #rf_d is dim of randomfeatures vector, to choose based on paper     
         self.s = (self.m+1) * self.rf_d
         self.samples = np.random.multivariate_normal(self.rf_mu,self.rf_cov, \

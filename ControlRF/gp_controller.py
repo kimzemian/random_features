@@ -23,23 +23,28 @@ class GPController(QPController):
         QPController.__init__(self, system_est, system_est.m)
 
     def add_stability_constraint(
-        self, aff_lyap, comp=0, slacked=False, time_slack=False, beta=1, coeff=0
-    ):
-        if slacked:
+        self, aff_lyap, comp=0, slack='none', beta=1, coeff=0
+    ):        
+        if slack=='none':
+            constraint = lambda x, t: self._build_cons(x, t, aff_lyap, comp, beta)
+            self.constraints.append(constraint)
+        else:
             delta = cp.Variable()
             self.variables.append(delta)
-            if time_slack:
+            if slack=='constant':
+                self.static_costs.append(coeff * cp.square(delta))
+            elif slack=='linear':
+                self.static_costs_lambda.append(
+                    lambda t: (t + 1) * coeff * cp.square(delta)
+                )
+            elif slack=='quadratic':
                 self.static_costs_lambda.append(
                     lambda t: (cp.square(t) + 1) * coeff * cp.square(delta)
                 )
-            else:
-                self.static_costs.append(coeff * cp.square(delta))
             constraint = lambda x, t: self._build_cons(
                 x, t, aff_lyap, comp, beta, delta
             )
-        else:
-            constraint = lambda x, t: self._build_cons(x, t, aff_lyap, comp, beta)
-        self.constraints.append(constraint)
+        
 
     def _build_cons(self, x, t, aff_lyap, comp, beta, delta=0):
         mv, sv = (
