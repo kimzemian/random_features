@@ -6,6 +6,7 @@ from matplotlib.patches import Rectangle
 from ControlRF.eval import simulate
 plt.style.use("seaborn-whitegrid")
 
+
 def render(system, controller, controller_name, x_0, T=20, num_steps=200):
     xs, us, ts = simulate(system, controller, x_0, T, num_steps)
     dt = T / num_steps
@@ -52,16 +53,16 @@ def render(system, controller, controller_name, x_0, T=20, num_steps=200):
         patch.set_height(cart_height)
         return line, time_text
 
-        def animate(i):
-            thisx = [x_solution[i], j1_x[i], j2_x[i]]
-            thisy = [0, j1_y[i], j2_y[i]]
+    def animate(i):
+        thisx = [x_solution[i], j1_x[i], j2_x[i]]
+        thisy = [0, j1_y[i], j2_y[i]]
 
-            line.set_data(thisx, thisy)
-            now = i * skip_frames * dt
-            time_text.set_text(time_template % now)
+        line.set_data(thisx, thisy)
+        now = i * skip_frames * dt
+        time_text.set_text(time_template % now)
 
-            patch.set_x(x_solution[i] - cart_width / 2)
-            return line, time_text, patch
+        patch.set_x(x_solution[i] - cart_width / 2)
+        return line, time_text, patch
 
     ani = animation.FuncAnimation(
         fig, animate, frames=frames, interval=1, blit=True, init_func=init, repeat=False
@@ -70,9 +71,8 @@ def render(system, controller, controller_name, x_0, T=20, num_steps=200):
     return ani
 
 
-def animate(system, controllers, gps, x_0):
+def create_animation(system, controllers, gps, x_0):
     ani = render(system, system.qp_controller, "qp_controller", x_0, T=100, num_steps=1000)
-    print('im here')
     ani.save('dip_qp_2.gif', writer=animation.PillowWriter(fps=24))
     for gp, controller in tqdm(zip(gps, controllers)):
         ani = render(

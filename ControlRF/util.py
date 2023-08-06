@@ -17,10 +17,10 @@ def init_controllers(system, system_est):
     system_est.fb_lin = FBLinController(system_est, model_lqr)
 
     system.qp_controller = QPController.build_care(system_est, Q, R)
-    system.qp_controller.add_regularizer(system_est.fb_lin, 25)
-    system.qp_controller.add_static_cost(np.identity(2))
+    system.qp_controller.add_regularizer(system_est.fb_lin, 16)
+    system.qp_controller.add_static_cost(1e2 * np.identity(2))
     system.qp_controller.add_stability_constraint(
-        system_est.lyap, comp=lambda r: system_est.alpha * r, slacked=True, coeff=1e5
+        system_est.lyap, comp=lambda r: system_est.alpha * r, slacked=True, coeff=1e6
     )
 
     system.lyap = AffineQuadCLF.build_care(system, Q, R)
@@ -28,10 +28,10 @@ def init_controllers(system, system_est):
     lqr = LQRController.build(system, Q, R)
     system.fb_lin = FBLinController(system, lqr)
     system.oracle_controller = QPController.build_care(system, Q, R)
-    system.oracle_controller.add_regularizer(system.fb_lin, 25)
-    system.oracle_controller.add_static_cost(np.identity(2))
+    system.oracle_controller.add_regularizer(system.fb_lin, 16)
+    system.oracle_controller.add_static_cost(1e2* np.identity(2))
     system.oracle_controller.add_stability_constraint(
-        system.lyap, comp=lambda r: system.alpha * r, slacked=True, coeff=1e5
+        system.lyap, comp=lambda r: system.alpha * r, slacked=True, coeff=1e6
     )
     
     return None

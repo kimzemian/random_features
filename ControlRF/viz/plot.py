@@ -1,13 +1,11 @@
 import re
 import pickle
-import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-plt.style.use("seaborn-whitegrid")
-
 from ControlRF.util import *
+
 
 
 def plot_info(x_0, controllers, path, diff=False):
