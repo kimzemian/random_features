@@ -1,5 +1,6 @@
 # fast data driven control
 
+## Description
 designed data driven gaussian process controllers for 6 different gaussian process methods: 
 
 1,2. affine dense kernel and corresponding affine dense random fourier features
@@ -18,4 +19,10 @@ git submodule update --init --recursive
 Then to setup
 ```
 cd core; python setup.py develop
+```
+## Usage
+
+episodic usage
+```
+gps_names options are ad_kernel, adp_kernel, ad_rf, adp_rf
 ```

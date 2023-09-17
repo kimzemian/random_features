@@ -1,4 +1,4 @@
-name = 'ControlRF'
+name = "ControlRF"
 from .gps.adp_kernel import ADPKernel
 from .gps.adp_rf import ADPRandomFeatures
 from .gps.ad_kernel import ADKernel

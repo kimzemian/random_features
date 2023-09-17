@@ -17,39 +17,40 @@ class GPController(QPController):
     """controller to ensure safety and/or stability using gp methods"""
 
     def __init__(self, system_est, gp):
-        self.__name__ = gp.__name__ + "controller"
+        super().__init__(system_est, system_est.m)
+        self.name = gp.name + "controller"
         gp.train()
         self.gp = gp
-        QPController.__init__(self, system_est, system_est.m)
 
-    def add_stability_constraint(
-        self, aff_lyap, comp=0, slack='none', beta=1, coeff=0
-    ):        
-        if slack=='none':
-            constraint = lambda x, t: self._build_cons(x, t, aff_lyap, comp, beta)
-            self.constraints.append(constraint)
+    def add_stability_constraint(self, aff_lyap, comp=0, slack="none", beta=1, coeff=0):
+        if slack == "none":
+
+            def constraint(x, t):
+                return self._build_cons(x, t, aff_lyap, comp, beta)
+
         else:
             delta = cp.Variable()
             self.variables.append(delta)
-            if slack=='constant':
+            if slack == "constant":
                 self.static_costs.append(coeff * cp.square(delta))
-            elif slack=='linear':
+            elif slack == "linear":
                 self.static_costs_lambda.append(
                     lambda t: (t + 1) * coeff * cp.square(delta)
                 )
-            elif slack=='quadratic':
+            elif slack == "quadratic":
                 self.static_costs_lambda.append(
                     lambda t: (cp.square(t) + 1) * coeff * cp.square(delta)
                 )
-            constraint = lambda x, t: self._build_cons(
-                x, t, aff_lyap, comp, beta, delta
-            )
-        
+
+            def constraint(x, t):
+                return self._build_cons(x, t, aff_lyap, comp, beta, delta)
+
+        self.constraints.append(constraint)
 
     def _build_cons(self, x, t, aff_lyap, comp, beta, delta=0):
         mv, sv = (
             self.gp.mean_var(x[np.newaxis, :]),
-            self.gp.sigma_var()
+            self.gp.sigma_var(),
         )  # m+1, (m+1,m+1)
         input_dep = -(aff_lyap.act(x, t) + mv[1:])  # m
         input_indep = delta - (
@@ -62,6 +63,7 @@ class GPController(QPController):
             input_dep @ self.u.T + input_indep,
             beta * sv[1:].T @ self.u + beta * sv[0].T,
         )
+
     def eval(self, x, t):
         static_cost = cp.sum(
             [s_cost(t) for s_cost in self.static_costs_lambda]

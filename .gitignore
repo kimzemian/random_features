@@ -3,3 +3,7 @@ test/
 .ipynb_checkpoints
 mosek.lic
 **/__pycache__/
+data/
+dip_plots/
+ruff.toml
+.vscode

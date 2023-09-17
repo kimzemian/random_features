@@ -1,9 +1,11 @@
-import matplotlib
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import animation
 from matplotlib.patches import Rectangle
+from tqdm import tqdm
+
 from ControlRF.eval import simulate
+
 plt.style.use("seaborn-whitegrid")
 
 
@@ -72,13 +74,12 @@ def render(system, controller, controller_name, x_0, T=20, num_steps=200):
 
 
 def create_animation(system, controllers, gps, x_0):
-    ani = render(system, system.qp_controller, "qp_controller", x_0, T=100, num_steps=1000)
-    ani.save('dip_qp_2.gif', writer=animation.PillowWriter(fps=24))
+    ani = render(
+        system, system.qp_controller, "qp_controller", x_0, T=100, num_steps=1000
+    )
+    ani.save("dip_qp_2.gif", writer=animation.PillowWriter(fps=24))
     for gp, controller in tqdm(zip(gps, controllers)):
         ani = render(
-            system, controller, f"{gp.__name__}_controller", x_0, T=100, num_steps=1000
+            system, controller, f"{gp.name}_controller", x_0, T=100, num_steps=1000
         )
-        ani.save(f'dip_{gp.__name__}_2.gif', writer=animation.PillowWriter(fps=24)) #%time
-
-        
-        
+        ani.save(f"dip_{gp.name}_2.gif", writer=animation.PillowWriter(fps=24))  # %time
