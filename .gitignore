@@ -4,6 +4,8 @@ test/
 mosek.lic
 **/__pycache__/
 data/
-dip_plots/
+plots/
 ruff.toml
+dip_c_dot_plots/
+dip_gifs/
 .vscode

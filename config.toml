@@ -1,0 +1,31 @@
+# num=number of data points//10
+# rf_d=rf_d = num + 1 if num % 2 else num
+[acrobat]
+gps_names = ['ad_rf', 'adp_rf', 'adp_rf_sketch']
+#grid T, num_steps
+# T = 1
+# num_steps = 10
+T = 20
+num_steps = 200
+x_0 = [3.1, 0.0, 0.0, 0.0]
+#slack= none, constant, linear, quadratic
+slack = "linear"
+beta = 1
+coeff = 1e6
+sgm = 10
+m = 2
+epochs = 20
+l_1 = 1
+l_2 = 1
+
+[inverted_pendulum]
+gps_names = ['ad_kernel', 'adp_kernel', 'ad_rf', 'adp_rf']
+T = 20
+num_steps = 200
+x_0 = [2.1, 0.0]
+slack = "linear"
+beta = 1
+coeff = 1e5
+sgm = 2
+m = 1
+epochs = 50
