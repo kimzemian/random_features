@@ -1,5 +1,5 @@
 import timeit
-
+import sys
 import numpy as np
 from numpy import linalg as la
 from scipy.linalg import sqrtm
@@ -61,7 +61,6 @@ class ADKernel(GaussianProcess):
         k_mat, diag_k = self._compute_kernel_helper(x_test)  # (n,n_t)
         diag_diff = (diag_k - k_mat) * self.y_train  # (n,m+1) #incorrect?
         self.k_h = k_mat * np.sum(self.y_train, 1, keepdims=True) + diag_diff  # (n,m+1)
-        return
 
     def train(self):
         # kernel training

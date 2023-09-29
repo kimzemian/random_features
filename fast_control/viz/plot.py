@@ -17,9 +17,11 @@ def plot_info(x_0, controllers, path, diff=False, c_cdot=0):
     c = 1
     fmts = ["c-", "m-", "y-", "r-"]
 
+    value = "$C$" if c_cdot == 0 else "$\dot{C}$"
+    val = "C" if c_cdot == 0 else "c_dot"
     fig, ax = plt.subplots(sharex=True)
     ax.set_xlabel("$t$", fontsize=8)
-    ax.set_ylabel("$C$", fontsize=8)
+    ax.set_ylabel(value, fontsize=8)
     data = np.load(path)
 
     if diff:
@@ -41,21 +43,23 @@ def plot_info(x_0, controllers, path, diff=False, c_cdot=0):
 
     ax.legend()
     if diff:
-        ax.set_title("difference from oracle C/C_dot for controllers over episodes")
+        ax.set_title(f"difference from oracle {value} for controllers over episodes")
     else:
-        ax.set_title("True C/C_dot for controllers over time")
+        ax.set_title(f"True {value} for controllers over time")
     plt.figtext(0.12, 0.94, f"x_0={x_0}")
     fig.figsize = (9, 6)
     fig.tight_layout()
-    fig.savefig(f"plots/acrobat/_10_sec-time{int(time.time())}.png")
+    if diff:
+        fig.savefig(f"plots/acrobat/{val}_for_10_sec_time{int(time.time())}.png")
+    else:
+        fig.savefig(f"plots/acrobat/{val}_diff_from_oracle{int(time.time())}.png")
     plt.show()
     plt.close()
 
     if not diff:
         fig, ax = plt.subplots(sharex=True)
         ax.set_xlabel("$t$", fontsize=8)
-        ylabel = "$C$" if c_cdot == 0 else "$C^{dot}$"
-        ax.set_ylabel(ylabel, fontsize=8)
+        ax.set_ylabel(value, fontsize=8)
 
         t_1 = 170
         t_2 = 200
@@ -84,11 +88,13 @@ def plot_info(x_0, controllers, path, diff=False, c_cdot=0):
         )
 
         ax.legend()
-        ax.set_title(f"True C/C_dot for controllers over time {t_1}:{t_2}")
+        ax.set_title(f"True {value} for controllers over time {t_1}:{t_2}")
         plt.figtext(0.12, 0.94, f"x_0={x_0}")
         fig.figsize = (9, 6)
         fig.tight_layout()
-        fig.savefig(f"plots/acrobat/sec_{t_1}_{t_2}-time{int(time.time())}.png")
+        fig.savefig(
+            f"plots/acrobat/{val}_for_sec_{t_1}_{t_2}_time{int(time.time())}.png"
+        )
         plt.show()
 
         plt.close()

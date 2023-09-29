@@ -11,27 +11,30 @@ from .gp import GaussianProcess
 class ADRFOne(GaussianProcess):
     """Affine dense random features GP."""
 
-    name = "ad_rf"
+    name = "ad_rf_one_kernel"
 
     def __init__(self, x_train, y_train, z_train, rf_d=50):
         super().__init__(x_train, y_train, z_train)
         self.rf_d = (
             rf_d  # rf_d is dim of randomfeatures vector, to choose based on paper
         )
-        self.samples = np.random.normal(
+        self.sample = np.random.multivariate_normal(
             self.rf_mu, self.rf_cov, size=(self.rf_d // 2)
         )  # (rf_d/2,d)
+        self.samples = np.repeat(self.sample, self.m + 1, axis=0)  # (s/2,d)
 
-    def _prephi(self, x):  # (n,rf_d)  first var: n or n_t
-        phi = np.empty((len(x), self.rf_d))
-        dot_product = np.reshape(x @ self.samples.T)  # (n,rf_d//2)
-        phi[:, 0::2] = np.sin(dot_product)
-        phi[:, 1::2] = np.cos(dot_product)
+    def _prephi(self, x):  # (n,rf_d,m+1)  first var: n or n_t
+        phi = np.empty((len(x), self.rf_d, self.m + 1))
+        dot_product = np.reshape(
+            x @ self.samples.T, (len(x), self.rf_d // 2, -1)
+        )  # (n,rf_d//2,m+1)
+        phi[:, 0::2, :] = np.sin(dot_product)
+        phi[:, 1::2, :] = np.cos(dot_product)
         phi = math.sqrt(2 / self.rf_d) * phi
         return phi
 
     def _compute_cphi(self, phi, y):  # (n,rf_d)  first var: n or n_t
-        return np.squeeze(phi[:, :, np.newaxis] @ y[:, np.newaxis, :])
+        return np.squeeze(phi @ y[:, :, np.newaxis])
 
     def train(self):
         tic = timeit.default_timer()

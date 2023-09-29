@@ -1,5 +1,5 @@
 import timeit
-
+import sys
 import numpy as np
 from numpy import linalg as la
 from scipy.linalg import sqrtm
@@ -15,6 +15,9 @@ class ADPKernel(GaussianProcess):
     def __init__(self, x_train, y_train, z_train):
         GaussianProcess.__init__(self, x_train, y_train, z_train)
 
+    def is_pos_def(self, x):
+        return np.all(la.eigvals(x) >= 0)
+
     def _compute_kernel(self, x_test):
         x_dif = self.x_train.reshape((self.n, 1, self.d)) - x_test
         return np.exp(
@@ -24,6 +27,10 @@ class ADPKernel(GaussianProcess):
     def train(self):
         tic = timeit.default_timer()
         kernel = self._compute_kernel(self.x_train)
+        # if not self.is_pos_def(kernel):
+        #     print(kernel.shape)
+        #     print(la.eigvals(kernel))
+        #     sys.exit()
         self.c_kernel = self.y_train @ self.y_train.T * kernel
         self.inv_ckernel = la.inv(
             self.c_kernel + self.sgm**2 * np.identity(self.n)

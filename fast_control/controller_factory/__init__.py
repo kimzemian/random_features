@@ -25,5 +25,8 @@ class ControllerFactory:
         self.m = sys_conf["m"]
         self.gps_names = sys_conf["gps_names"]
         self.epochs = sys_conf["epochs"]
+        self.sys_params = sys_conf["sys_params"]
+        self.sys_est_params = sys_conf["sys_est_params"]
+        # init_systems(self)
         init_oracle_controller(self)
         init_qp_controller(self)

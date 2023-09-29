@@ -5,6 +5,8 @@ sys.path.append("/home/kk983/core")
 import numpy as np
 import numpy.linalg as la
 from core.controllers import FBLinController, LQRController, QPController
+
+# from core.systems import DoubleInvertedPendulum, InvertedPendulum
 from core.dynamics import AffineQuadCLF
 from fast_control import GPController
 from fast_control.gps import (
@@ -13,7 +15,17 @@ from fast_control.gps import (
     ADPRandomFeatures,
     ADRandomFeatures,
     ADPRFSketch,
+    ADRFOne,
 )
+
+
+# def init_systems(self):
+#     if self.m == 1:
+#         self.system = DoubleInvertedPendulum(*self.sys_params)
+#         self.system_est = DoubleInvertedPendulum(*self.sys_params)
+#     else:
+#         self.system = InvertedPendulum(*self.sys_params)
+#         self.system_est = InvertedPendulum(*self.sys_params)
 
 
 def init_oracle_controller(self):
@@ -97,6 +109,8 @@ def init_gp(self, gp_name, datum, rf_d):
         return ADPKernel(*datum)
     elif gp_name == ADPRFSketch.name:
         return ADPRFSketch(*datum, rf_d)
+    elif gp_name == ADRFOne.name:
+        return ADRFOne(*datum, rf_d)
     # use match if python version allows
 
 
@@ -120,11 +134,11 @@ def init_gpcontroller_pairs(self, data):
     _, _, zs = next(iter(data.values()))
     num = len(zs) // 10
     rf_d = num + 1 if num % 2 else num  # TODO:make rf_d user determinable
-    print(f"data size:{len(zs)}, rf_d is: {rf_d}")
+    print(f"data size:{len(zs)}, rf_d is: {2*rf_d}")  # FIXME 2
     gps = []
     controllers = []
     for gp_name, datum in data.items():
-        gp = init_gp(self, gp_name, datum, rf_d)
+        gp = init_gp(self, gp_name, datum, 2 * rf_d)
         controller = init_gpcontroller(self, gp)
         gps.append(gp)
         controllers.append(controller)

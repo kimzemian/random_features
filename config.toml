@@ -1,7 +1,9 @@
 # num=number of data points//10
 # rf_d=rf_d = num + 1 if num % 2 else num
 [acrobat]
-gps_names = ['ad_rf', 'adp_rf', 'adp_rf_sketch']
+sys_params = [0.6, 0.6, 0.6, 0.6]
+sys_est_params = [1, 1, 1, 1]
+gps_names = ['ad_rf']
 #grid T, num_steps
 # T = 1
 # num_steps = 10
@@ -14,7 +16,7 @@ beta = 1
 coeff = 1e6
 sgm = 10
 m = 2
-epochs = 20
+epochs = 50
 l_1 = 1
 l_2 = 1
 

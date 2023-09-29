@@ -15,7 +15,11 @@ from .init_controllers import init_gp_dict, init_gpcontroller_pairs
 def train_grid(self):
     """Train data driven controllers on grid data."""
     xs, ys, zs = create_grid_data(self)
-    data = init_gp_dict(xs, ys, zs)
+    # data = np.load("data/init_grid.npz")
+    # xs = data["xs"]
+    # ys = data["ys"]
+    # zs = data["zs"]
+    data = init_gp_dict(self, xs, ys, zs)
     controllers, gps = init_gpcontroller_pairs(self, data)
     return controllers, gps
 
@@ -64,6 +68,8 @@ def train_episodic_with_info(self):
         diff_qp_zs[:, epoch] = diff_qp_z
 
     # saves sum of difference between the controllers and the oracle
+    with open("data/raw_episodic_data.pkl", "wb") as handle:
+        pickle.dump(data, handle)
     np.savez("data/eval_cs", gp_zs=gp_zs, qp_zs=qp_zs, model_zs=model_zs, ts=ts)
     np.savez(
         "data/diff_from_oracle",
@@ -73,7 +79,7 @@ def train_episodic_with_info(self):
         ts=np.arange(self.epochs),
     )
     with open("data/test_previous_gp.pickle", "wb") as handle:
-        pickle.dump(tested_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(tested_data, handle)
 
     return controllers, gps
 

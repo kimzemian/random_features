@@ -113,4 +113,4 @@ def grid_info(self, controllers):
     """Wrap info_data_gen."""
     # compute eval_func(true c_dot/true c) for controllers
     gp_z, qp_z, model_z, ts = info_data_gen(self, controllers)
-    np.savez("data/eval_cs", gp_z=gp_z, qp_z=qp_z, model_z=model_z, ts=ts)
+    np.savez("data/eval_cs_grid", gp_z=gp_z, qp_z=qp_z, model_z=model_z, ts=ts)
