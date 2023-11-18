@@ -3,7 +3,6 @@ import sys
 import numpy as np
 from numpy import linalg as la
 from scipy.linalg import sqrtm
-
 from .gp import GaussianProcess
 
 
@@ -12,8 +11,10 @@ class ADPKernel(GaussianProcess):
 
     name = "adp_kernel"
 
-    def __init__(self, x_train, y_train, z_train):
+    def __init__(self, x_train, y_train, z_train, sgm=1, reg_param=1, rf_d=None):
         GaussianProcess.__init__(self, x_train, y_train, z_train)
+        self.sgm = sgm
+        self.reg_param = reg_param
 
     def is_pos_def(self, x):
         return np.all(la.eigvals(x) >= 0)
@@ -33,7 +34,7 @@ class ADPKernel(GaussianProcess):
         #     sys.exit()
         self.c_kernel = self.y_train @ self.y_train.T * kernel
         self.inv_ckernel = la.inv(
-            self.c_kernel + self.sgm**2 * np.identity(self.n)
+            self.c_kernel + self.reg_param * np.identity(self.n)
         )  # (n,n)
         toc = timeit.default_timer()
         self.training_time = toc - tic
@@ -42,10 +43,10 @@ class ADPKernel(GaussianProcess):
         tic = timeit.default_timer()
         k_vec = self._compute_kernel(x_test)  # (n,n_t)
         self.c_vec = self.y_train @ y_test.T * k_vec  # (n,n_t)
-        pred = self.z_train @ self.inv_ckernel @ self.c_vec  # n_t
+        pred = self.z_train.T @ self.inv_ckernel @ self.c_vec  # (dim,n_t)
         toc = timeit.default_timer()
         self.test_time = toc - tic
-        return pred
+        return pred.T
 
     def sigma(self, x_test=None, y_test=None):  # n_t
         return np.einsum("ij,ji->i", y_test, y_test.T) - np.einsum(

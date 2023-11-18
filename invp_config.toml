@@ -1,0 +1,11 @@
+gps_names = ['ad_kernel', 'adp_kernel', 'ad_rf', 'adp_rf']
+T = 20
+num_steps = 200
+x_0 = [2.1, 0.0]
+slack = "linear"
+beta = 1
+coeff = 1e5
+sgm = 2
+m = 1
+epochs = 50
+[inverted_pendulum.ad_kernel]

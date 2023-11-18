@@ -1,33 +1,52 @@
 # num=number of data points//10
 # rf_d=rf_d = num + 1 if num % 2 else num
-[acrobat]
-sys_params = [0.6, 0.6, 0.6, 0.6]
-sys_est_params = [1, 1, 1, 1]
-gps_names = ['ad_rf']
+
+# l_1 = 1
+# l_2 = 1
 #grid T, num_steps
 # T = 1
 # num_steps = 10
-T = 20
-num_steps = 200
-x_0 = [3.1, 0.0, 0.0, 0.0]
-#slack= none, constant, linear, quadratic
-slack = "linear"
+
+[controller_factory]
+sys_params = [0.6, 0.6, 0.6, 0.6]
+sys_est_params = [1, 1, 1, 1]
+m = 2
+
+[controller_factory.grid]
+T = 4
+num_steps = 10
+
+[controller_factory.episodic]
+T = 10
+num_steps = 100
+x_0 = [2.0, 0.0, 0.0, 0.0]
+epochs = 10
+
+
+[controller_factory.nominal_controller]
+static_cost = 1
+coef = 1e6
+regularizer = 25
+
+
+[gp_controller]
+slack = "linear" #slack= none, constant, linear, quadratic
 beta = 1
 coeff = 1e6
-sgm = 10
-m = 2
-epochs = 50
-l_1 = 1
-l_2 = 1
 
-[inverted_pendulum]
-gps_names = ['ad_kernel', 'adp_kernel', 'ad_rf', 'adp_rf']
-T = 20
-num_steps = 200
-x_0 = [2.1, 0.0]
-slack = "linear"
-beta = 1
-coeff = 1e5
-sgm = 2
-m = 1
-epochs = 50
+[gps]
+[gps.ad_rf]
+sgm = 0.1
+reg_param = 10
+
+[gps.adp_rf]
+sgm = 0.1
+reg_param = 10
+
+[gps.ad_kernel]
+sgm = 0.1
+reg_param = 10
+
+[gps.adp_kernel]
+sgm = 0.1
+reg_param = 10

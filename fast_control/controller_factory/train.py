@@ -9,31 +9,35 @@ from .data import (
     info_data_gen,
     training_data_gen,
 )
-from .init_controllers import init_gp_dict, init_gpcontroller_pairs
+from .init_controllers import train_controllers
+from fast_control.gp_factory import init_gp_dict, GPFactory
 
 
-def train_grid(self):
-    """Train data driven controllers on grid data."""
-    xs, ys, zs = create_grid_data(self)
-    # data = np.load("data/init_grid.npz")
-    # xs = data["xs"]
-    # ys = data["ys"]
-    # zs = data["zs"]
-    data = init_gp_dict(self, xs, ys, zs)
-    controllers, gps = init_gpcontroller_pairs(self, data)
-    return controllers, gps
+# def train_grid(self): #FIXME update create_grid_data
+#     """Train data driven controllers on grid data."""
+#     xs, ys, zs = create_grid_data(self)
+#     gp_factory = GPFactory()
+#     data = init_gp_dict(gp_factory, xs, ys, zs)
+#     controllers, gps = train_controllers(self, gp_factory, data)
+#     return controllers, gps
 
 
-def train_episodic_with_info(self):
+def train_episodic_with_info(self, data_path, warm_start=False):
     """Episodically train data driven controllers and save information."""
-    xs, ys, zs = training_data_gen(self, self.system.qp_controller)
+    if warm_start:
+        init_data = np.load("/home/kk983/fast_control/data/grid/init_grid_small.npz")
+        xs, ys, zs = init_data['xs'], init_data['ys'], init_data['zs']
+    else:
+        xs, ys, zs = training_data_gen(self, self.system.qp_controller)
+    gp_factory = GPFactory()
+    self.gps_names = gp_factory.gp_param_dict.keys()
     data = dict.fromkeys(self.gps_names)
     tested_data = dict.fromkeys(self.gps_names)
     for gp_name in self.gps_names:
         data[gp_name] = (np.copy(xs), np.copy(ys), np.copy(zs))
         tested_data[gp_name] = np.empty((self.num_steps - 1, self.epochs))
 
-    controllers, gps = init_gpcontroller_pairs(self, data)
+    controllers, gps = train_controllers(self, gp_factory, data)
 
     gp_zs = np.empty((2, len(self.gps_names), self.num_steps, self.epochs))
     qp_zs = np.empty((2, self.num_steps, self.epochs))
@@ -53,7 +57,7 @@ def train_episodic_with_info(self):
             pred = gp.test(x, y)
             tested_data[gp.name][:, epoch] = np.abs(pred - z)
 
-        controllers, gps = init_gpcontroller_pairs(self, data)
+        controllers, gps = train_controllers(self, gp_factory, data)
         print(f"iteration {epoch} training ended")
 
         # compute eval_func(true c_dot/true c) for controllers
@@ -68,17 +72,17 @@ def train_episodic_with_info(self):
         diff_qp_zs[:, epoch] = diff_qp_z
 
     # saves sum of difference between the controllers and the oracle
-    with open("data/raw_episodic_data.pkl", "wb") as handle:
+    with open(data_path+"raw_episodic_data.pkl", "wb") as handle:
         pickle.dump(data, handle)
-    np.savez("data/eval_cs", gp_zs=gp_zs, qp_zs=qp_zs, model_zs=model_zs, ts=ts)
+    np.savez(data_path+"eval_cs", gp_zs=gp_zs, qp_zs=qp_zs, model_zs=model_zs, ts=ts)
     np.savez(
-        "data/diff_from_oracle",
+        data_path+"diff_from_oracle",
         gp_zs=diff_gp_zs,
         qp_zs=diff_qp_zs,
         model_zs=np.zeros((2, self.epochs)),
         ts=np.arange(self.epochs),
     )
-    with open("data/test_previous_gp.pickle", "wb") as handle:
+    with open(data_path+"test_previous_gp.pickle", "wb") as handle:
         pickle.dump(tested_data, handle)
 
     return controllers, gps
@@ -87,9 +91,10 @@ def train_episodic_with_info(self):
 def train_episodic(self):
     """Episodically train data driven controllers."""
     xs, ys, zs = training_data_gen(self.system.qp_controller)
-    data = init_gp_dict(self, xs, ys, zs)
+    gp_factory = GPFactory()
+    data = init_gp_dict(gp_factory, xs, ys, zs)
 
-    controllers, gps = init_gpcontroller_pairs(self, data)
+    controllers, gps = train_controllers(self, gp_factory, data)
 
     for epoch in tqdm(range(self.epochs)):
         for controller, gp in zip(controllers, gps):
@@ -102,6 +107,6 @@ def train_episodic(self):
             zs = np.concatenate((zs, z))
             data[gp.name] = xs, ys, zs
 
-        controllers, gps = init_gpcontroller_pairs(self, data)
+        controllers, gps = train_controllers(self, gp_factory, data)
         print(f"iteration{epoch}")
     return controllers, gps

@@ -19,6 +19,8 @@ git submodule update --init --recursive
 Then to setup
 ```
 cd core; python setup.py develop
+
+cd fast_control; python -e setup.py
 ```
 ## Usage
 

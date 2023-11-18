@@ -4,7 +4,6 @@ import sys
 
 import cvxpy as cp
 import numpy as np
-import toml
 
 module_path = os.path.abspath(os.path.join("."))
 os.environ["MOSEKLM_LICENSE_FILE"] = module_path
@@ -14,30 +13,24 @@ module_path = os.path.abspath(os.path.join(".."))
 if module_path not in sys.path:
     sys.path.append(module_path + "/core")
 
-from core.controllers import QPController  # noqa: E402
+from core.controllers import QPController
+from fast_control.util import load_config
 
 # Load the configuration from the YAML file
-with open("config.toml") as f:
-    config = toml.load(f)
 
 
 class GPController(QPController):
     """Controller to ensure safety and/or stability using gp methods."""
 
-    def __init__(self, system_est, gp):
+    def __init__(self, system_est, gp, config_path):
         """Initialize controller."""
         super().__init__(system_est, system_est.m)
         self.lyap = system_est.lyap
-        self.name = gp.name + "controller"
-        gp.train()
+        self.name = f"{gp.name}controller"
         self.gp = gp
         self.comp = system_est.alpha
-        sys_conf = (
-            config["inverted_pendulum"] if system_est.m == 1 else config["acrobat"]
-        )
-        self.slack = sys_conf["slack"]
-        self.beta = sys_conf["beta"]
-        self.coeff = sys_conf["coeff"]
+        conf = load_config(config_path)["gp_controller"]
+        self.slack, self.beta, self.coeff = conf["slack"], conf["beta"], conf["coeff"]
 
     def add_stability_constraint(self):
         """Add stability constraint to controller.

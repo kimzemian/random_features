@@ -1,106 +1,75 @@
 """Plot methods."""
-import re
+
+import pickle
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-from fast_control.controller_factory import simulate_sys, eval_cs, eval_all
+import seaborn as sns
+
+from fast_control.controller_factory import eval_all, simulate_sys
 
 
-def plot_info(x_0, controllers, path, diff=False, c_cdot=0):
+def plot_episodic_cum_diff_from_oracle(self, data, path_to_save, c_cdot=0):
+    """Plot sum of difference from the oracle controller for each controller over epochs."""
+    value, val = self.set_value(c_cdot)
+    fig, ax = plot_info_helper(self, *data, c_cdot)
+    path = f"{path_to_save}{val}cumulative_diff_from_oracle.png"
+    title = (
+        "sum of difference from the oracle controller for each controller over epochs"
+    )
+    self.finalize_and_save(fig, ax, value, path, title)
+
+
+def plot_info(self, data, cut_off, path_to_save, c_cdot=0):
     """Plot information.
 
-    options:
-    1.true C_dot/C for each controller over time
-    2.sum of difference from the oracle controller for each controller over epochs
+    true C_dot/C for each controller over time.
     """
-    c = 1
-    fmts = ["c-", "m-", "y-", "r-"]
+    value, val = self.set_value(c_cdot)
+    fig, ax = plot_info_helper(self, *data, c_cdot)
+    path = f"{path_to_save}true_{val}_{int(time.time())}.png"
+    self.finalize_and_save(fig, ax, value, path)
 
-    value = "$C$" if c_cdot == 0 else "$\dot{C}$"
-    val = "C" if c_cdot == 0 else "c_dot"
+    fig, ax = plot_info_helper(self, *data, c_cdot, cut_off)
+    path = f"{path_to_save}true_{val}_last_{-cut_off}_sec_{int(time.time())}.png"
+    self.finalize_and_save(fig, ax, value, path)
+
+
+def plot_info_helper(self, gp_zs, qp_zs, model_zs, ts, c_cdot=0, cut_off=None):
+    # c = 1
+    if cut_off is None:
+        cut_off = len(ts)
     fig, ax = plt.subplots(sharex=True)
-    ax.set_xlabel("$t$", fontsize=8)
-    ax.set_ylabel(value, fontsize=8)
-    data = np.load(path)
+    plt.xlabel("time (s)", fontsize=8)
 
-    if diff:
-        gp_zs = data["gp_zs"]
-        qp_zs = data["qp_zs"]
-        model_zs = data["model_zs"]
-        ts = data["ts"]
-    else:
-        gp_zs = data["gp_zs"][:, :, :, -1]
-        qp_zs = data["qp_zs"][:, :, -1]
-        model_zs = data["model_zs"][:, :, -1]
-        ts = data["ts"]
+    for i, gp_name in enumerate(self.gps_names):
+        sns.lineplot(
+            x=ts[:cut_off],
+            y=gp_zs[c_cdot, i, :cut_off],
+            label=gp_name + "_controller",
+        )  # markersize=c
 
-    for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
-        ax.plot(ts, gp_zs[c_cdot, i], fmt, label=controller.name, markersize=c)
-
-    ax.plot(ts, qp_zs[c_cdot, :], "-", label="qp_controller", markersize=c)
-    ax.plot(ts, model_zs[c_cdot, :], "k-.", label="oracle_controller", markersize=c)
+    sns.lineplot(
+        x=ts[:cut_off],
+        y=qp_zs[c_cdot, :cut_off],
+        linestyle="dotted",
+        color="black",
+        label="qp_controller",
+    )
+    sns.lineplot(
+        x=ts[:cut_off],
+        y=model_zs[c_cdot, :cut_off],
+        linestyle="dashdot",
+        color="black",
+        label="oracle_controller",
+    )
 
     ax.legend()
-    if diff:
-        ax.set_title(f"difference from oracle {value} for controllers over episodes")
-    else:
-        ax.set_title(f"True {value} for controllers over time")
-    plt.figtext(0.12, 0.94, f"x_0={x_0}")
-    fig.figsize = (9, 6)
-    fig.tight_layout()
-    if diff:
-        fig.savefig(f"plots/acrobat/{val}_for_10_sec_time{int(time.time())}.png")
-    else:
-        fig.savefig(f"plots/acrobat/{val}_diff_from_oracle{int(time.time())}.png")
-    plt.show()
-    plt.close()
-
-    if not diff:
-        fig, ax = plt.subplots(sharex=True)
-        ax.set_xlabel("$t$", fontsize=8)
-        ax.set_ylabel(value, fontsize=8)
-
-        t_1 = 170
-        t_2 = 200
-        for i, (controller, fmt) in enumerate(zip(controllers, fmts)):
-            ax.plot(
-                ts[t_1:t_2],
-                gp_zs[c_cdot, i, t_1:t_2],
-                fmt,
-                label=controller.name,
-                markersize=c,
-                alpha=0.4,
-            )
-        ax.plot(
-            ts[t_1:t_2],
-            qp_zs[c_cdot, t_1:t_2],
-            "-",
-            label="qp_controller",
-            markersize=c,
-        )
-        ax.plot(
-            ts[t_1:t_2],
-            model_zs[c_cdot, t_1:t_2],
-            "k-.",
-            label="oracle_controller",
-            markersize=c,
-        )
-
-        ax.legend()
-        ax.set_title(f"True {value} for controllers over time {t_1}:{t_2}")
-        plt.figtext(0.12, 0.94, f"x_0={x_0}")
-        fig.figsize = (9, 6)
-        fig.tight_layout()
-        fig.savefig(
-            f"plots/acrobat/{val}_for_sec_{t_1}_{t_2}_time{int(time.time())}.png"
-        )
-        plt.show()
-
-        plt.close()
+    return fig, ax
 
 
-def plot_simulation(factory, controller, x_0=None):
+def plot_simulation(self, factory, controller, x_0=None):
     """Plot simulated system trajectories using specified controller.
 
     one dimensional: such as inverted pendulum
@@ -129,7 +98,7 @@ def plot_simulation(factory, controller, x_0=None):
     plt.close()
 
 
-def plot_pred_errorbar(xs, ys, zs, gps):
+def plot_pred_errorbar(self, xs, ys, zs, gps):
     """Plot gp prediction on training data."""
     c = 1
     fmts = ["r.", "b.", "g.", "c."]
@@ -158,7 +127,7 @@ def plot_pred_errorbar(xs, ys, zs, gps):
     plt.close()
 
 
-def plot_closed_loop_errorbar(factory, controller, gp, x_0, cut_off=0):
+def plot_closed_loop_errorbar(self, factory, controller, gp, x_0, cut_off=0):
     """Plot error bars for simulated system given a controller."""
     c = 1
     all_xs, all_ys, all_zs = factory.training_data_gen(controller, x_0)
@@ -187,7 +156,7 @@ def plot_closed_loop_errorbar(factory, controller, gp, x_0, cut_off=0):
     plt.close()
 
 
-def plot_all_closed_loop_errorbars(factory, controllers, gps, x_0, cut_off=0):
+def plot_all_closed_loop_errorbars(self, factory, controllers, gps, x_0, cut_off=0):
     """Plot error bars for simulated system for all controllers."""
     c = 1
     fmts = ["c.", "m.", "y.", "r."]
@@ -219,7 +188,7 @@ def plot_all_closed_loop_errorbars(factory, controllers, gps, x_0, cut_off=0):
     plt.close()
 
 
-def plot_simulation_dip(factory, controller, x_0):
+def plot_simulation_dip(self, factory, controller, x_0):
     """Plot simulated system trajectories using specified controller."""
     xs, us, ts = simulate_sys(factory, controller, x_0)
     ax = plt.figure(figsize=(8, 6), tight_layout=True).add_subplot(1, 1, 1)
@@ -256,7 +225,7 @@ def plot_simulation_dip(factory, controller, x_0):
     plt.close()
 
 
-def plot_qp(factory, c_cdot=0):
+def plot_qp(self, factory, c_cdot=0):
     """Plot QP and oracle controller."""
     qp_zs, us, ts = eval_all(factory, factory.system.qp_controller)
     model_zs, us, _ = eval_all(factory, factory.system.oracle_controller)
@@ -270,3 +239,29 @@ def plot_qp(factory, c_cdot=0):
     time = 1
     ax.plot(ts[1:], us, "-", label="qp_controller_us")
     ax.plot(ts[1:], us, "k-.", label="oracle_controller_us")
+
+
+def plot_mean_prediction_error(self, epochs):
+    """Plot sum absolute value of true C_dot/true C minus the predicted C/C_dot over epoch."""
+    with open("data/test_previous_gp.pickle", "rb") as handle:
+        data = pickle.load(handle)
+    value = next(iter(data.values()))
+    epochs = len(value[0])
+    ts = np.linspace(0, epochs, epochs)
+    c = 1
+    fig, ax = plt.subplots(sharex=True)
+    # ax.set_ylim(0, 10000)
+    ax.set_xlabel("$episodes$", fontsize=8)
+    ax.set_ylabel("mean prediction error", fontsize=8)
+    for key in data:
+        mean_error = np.sum(data[key], axis=0)
+        ax.plot(ts, mean_error, "-", label=key, markersize=c, alpha=0.4)
+
+    ax.legend()
+    ax.set_title(f"mean prediction error")
+    # plt.figtext(0.12, 0.94, f"x_0={x_0},{key}")
+    fig.figsize = (9, 6)
+    fig.tight_layout()
+    fig.savefig(f"mean prediction error")
+    plt.show()
+    plt.close()

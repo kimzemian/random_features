@@ -8,16 +8,10 @@ from core.controllers import FBLinController, LQRController, QPController
 
 # from core.systems import DoubleInvertedPendulum, InvertedPendulum
 from core.dynamics import AffineQuadCLF
-from fast_control import GPController
-from fast_control.gps import (
-    ADKernel,
-    ADPKernel,
-    ADPRandomFeatures,
-    ADRandomFeatures,
-    ADPRFSketch,
-    ADRFOne,
-)
 
+from fast_control.gp_factory import train_gps
+
+from .gp_controller import GPController
 
 # def init_systems(self):
 #     if self.m == 1:
@@ -61,7 +55,7 @@ def init_oracle_controller(self):
     self.system.oracle_controller.name = "oracle_controller"
 
 
-def init_qp_controller(self):
+def init_qp_controller(self):  # FIXME update hard coded params with self.nominal params
     """Initialize QP controller."""
     if self.m == 1:
         self.system_est.lyap = AffineQuadCLF.build_care(
@@ -86,38 +80,25 @@ def init_qp_controller(self):
         model_lqr = LQRController.build(self.system_est, Q, R)
         self.system_est.fb_lin = FBLinController(self.system_est, model_lqr)
         self.system.qp_controller = QPController.build_care(self.system_est, Q, R)
-        self.system.qp_controller.add_regularizer(self.system_est.fb_lin, 25)
-        self.system.qp_controller.add_static_cost(np.identity(2))
+        self.system.qp_controller.add_regularizer(
+            self.system_est.fb_lin, self.nominal_regularizer
+        )
+        self.system.qp_controller.add_static_cost(
+            self.nominal_static_cost * np.identity(2)
+        )
         self.system.qp_controller.add_stability_constraint(
             self.system_est.lyap,
             comp=lambda r: self.system_est.alpha * r,
             slacked=True,
-            coeff=1e6,
+            coeff=self.nominal_coef,
         )
     self.system.qp_controller.name = "qp_controller"
-
-
-def init_gp(self, gp_name, datum, rf_d):
-    """Initialize specified kernel."""
-    if gp_name == ADRandomFeatures.name:
-        return ADRandomFeatures(*datum, self.m * rf_d)
-    elif gp_name == ADPRandomFeatures.name:
-        return ADPRandomFeatures(*datum, rf_d)
-    elif gp_name == ADKernel.name:
-        return ADKernel(*datum)
-    elif gp_name == ADPKernel.name:
-        return ADPKernel(*datum)
-    elif gp_name == ADPRFSketch.name:
-        return ADPRFSketch(*datum, rf_d)
-    elif gp_name == ADRFOne.name:
-        return ADRFOne(*datum, rf_d)
-    # use match if python version allows
 
 
 def init_gpcontroller(self, gp):
     """Initialize controlller for a given gp."""
     print(gp.name)
-    gp_controller = GPController(self.system_est, gp)
+    gp_controller = GPController(self.system_est, gp, self.config_path)
     if self.m == 2:
         gp_controller.add_regularizer(self.system_est.fb_lin, 25)
         gp_controller.add_static_cost(np.identity(2))
@@ -129,25 +110,11 @@ def init_gpcontroller(self, gp):
     return gp_controller
 
 
-def init_gpcontroller_pairs(self, data):
-    """Wrap init_gp and init_gpcontroller."""
-    _, _, zs = next(iter(data.values()))
-    num = len(zs) // 10
-    rf_d = num + 1 if num % 2 else num  # TODO:make rf_d user determinable
-    print(f"data size:{len(zs)}, rf_d is: {2*rf_d}")  # FIXME 2
-    gps = []
+def train_controllers(self, gp_factory, data, rf_d=None):
+    """Wrapper for init_gpcontroller."""
+    gps = train_gps(gp_factory, data, rf_d)
     controllers = []
-    for gp_name, datum in data.items():
-        gp = init_gp(self, gp_name, datum, 2 * rf_d)
+    for gp in gps:
         controller = init_gpcontroller(self, gp)
-        gps.append(gp)
         controllers.append(controller)
     return controllers, gps
-
-
-def init_gp_dict(self, xs, ys, zs):
-    """Initialize gp dictionary."""
-    data = dict.fromkeys(self.gps_names)
-    for gp_name in self.gps_names:
-        data[gp_name] = (np.copy(xs), np.copy(ys), np.copy(zs))
-    return data

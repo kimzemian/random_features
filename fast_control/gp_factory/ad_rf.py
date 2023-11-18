@@ -4,7 +4,6 @@ import timeit
 import numpy as np
 from numpy import linalg as la
 from scipy.linalg import sqrtm
-
 from .gp import GaussianProcess
 
 
@@ -13,11 +12,14 @@ class ADRandomFeatures(GaussianProcess):
 
     name = "ad_rf"
 
-    def __init__(self, x_train, y_train, z_train, rf_d=50):
+    def __init__(self, x_train, y_train, z_train, sgm=1, reg_param=1, rf_d=100, seed=None):
         super().__init__(x_train, y_train, z_train)
-        self.rf_d = (
-            rf_d  # rf_d is dim of randomfeatures vector, to choose based on paper
-        )
+        if seed is not None:
+            np.random.seed(seed)
+        self.rf_d = rf_d
+        self.sgm = sgm
+        self.reg_param = reg_param
+        self.rf_cov = (self.sgm**2) * np.identity(self.d)
         self.samples = np.random.multivariate_normal(
             self.rf_mu, self.rf_cov, size=((self.m + 1) * self.rf_d // 2)
         )  # (s/2,d)
@@ -40,7 +42,7 @@ class ADRandomFeatures(GaussianProcess):
         prephi = self._prephi(self.x_train)  # (n,rf_d,m+1)
         self.phi = self._compute_cphi(prephi, self.y_train)  # (n,rf_d)
         self.inv_phi = la.inv(
-            self.phi.T @ self.phi + self.sgm**2 * np.identity(self.rf_d)
+            self.phi.T @ self.phi + self.reg_param * np.identity(self.rf_d)
         )  # (rf_d,rf_d)
         toc = timeit.default_timer()
         self.training_time = toc - tic
@@ -57,8 +59,8 @@ class ADRandomFeatures(GaussianProcess):
 
     def sigma(self, x_test=None, y_test=None):
         # random features variance computation
-        return self.sgm**2 * np.einsum(
-            "ij,jk,ki->i", self.phi_test, self.inv_phi, self.phi_test.T
+        return self.reg_param * np.einsum(
+            "ij,jk,ik->i", self.phi_test, self.inv_phi, self.phi_test
         )
 
     def estimate_kernel(self):
@@ -73,7 +75,7 @@ class ADRandomFeatures(GaussianProcess):
         return meanvar
 
     def sigma_var(self):  # n_t=1
-        sigmavar = self.sgm * sqrtm(
+        sigmavar = np.sqrt(self.reg_param) * sqrtm(
             abs(self.prephi_test.T @ self.inv_phi @ self.prephi_test)
         )  # (m+1,m+1)
         # norm(y @ sigmavar.T)

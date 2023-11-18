@@ -4,7 +4,6 @@ import timeit
 import numpy as np
 from numpy import linalg as la
 from scipy.linalg import sqrtm
-
 from .gp import GaussianProcess
 
 
@@ -13,11 +12,16 @@ class ADPRandomFeatures(GaussianProcess):
 
     name = "adp_rf"
 
-    def __init__(self, x_train, y_train, z_train, rf_d=50):
+    def __init__(
+        self, x_train, y_train, z_train, sgm=1, reg_param=1, rf_d=100, seed=None
+    ):
         super().__init__(x_train, y_train, z_train)
-        self.rf_d = (
-            rf_d  # rf_d is dim of randomfeatures vector, to choose based on paper
-        )
+        if seed is not None:
+            np.random.seed(seed)
+        self.rf_d = rf_d
+        self.sgm = sgm
+        self.reg_param = reg_param
+        self.rf_cov = (self.sgm**2) * np.identity(self.d)
         self.s = (self.m + 1) * self.rf_d
         self.samples = np.random.multivariate_normal(
             self.rf_mu, self.rf_cov, size=((self.m + 1) * self.rf_d // 2)
@@ -41,7 +45,7 @@ class ADPRandomFeatures(GaussianProcess):
         self.cphi = self._compute_cphi(phi, self.y_train)  # (n,s)
         self.inv_cphi = la.inv(
             self.cphi.T @ self.cphi
-            + self.sgm**2 * np.identity((self.m + 1) * self.rf_d)
+            + self.reg_param * np.identity((self.m + 1) * self.rf_d)
         )  # (s,s)
         toc = timeit.default_timer()
         self.training_time = toc - tic
@@ -56,8 +60,8 @@ class ADPRandomFeatures(GaussianProcess):
         return pred
 
     def sigma(self, x_test=None, y_test=None):
-        return self.sgm**2 * np.einsum(
-            "ij,jk,ki->i", self.cphi_test, self.inv_cphi, self.cphi_test.T
+        return self.reg_param * np.einsum(
+            "ij,jk,ik->i", self.cphi_test, self.inv_cphi, self.cphi_test
         )
 
     def estimate_ckernel(self):
@@ -79,6 +83,8 @@ class ADPRandomFeatures(GaussianProcess):
         inv = self.inv_cphi.reshape(
             (-1, self.rf_d, self.m + 1, self.rf_d)
         )  # (m+1,rf_d,m+1,rf_d)
-        sigmavar = sqrtm(abs(np.einsum("ij,ijkl,kl->ik", test, inv, test)))  # (m+1,m+1)
+        sigmavar = np.sqrt(self.reg_param) * sqrtm(
+            abs(np.einsum("ij,ijkl,kl->ik", test, inv, test))
+        )  # (m+1,m+1)
         # norm(y @ sigmavar.T)
         return sigmavar.T

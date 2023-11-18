@@ -1,2 +1,2 @@
-from .gp_controller import GPController
-from .controller_factory import ControllerFactory
+name = "fast_control"
+# from .gp_factory import GPFactory
